@@ -8,7 +8,9 @@ Class {
 		'relationKinds',
 		'relations',
 		'queue',
-		'tracker'
+		'tracker',
+		'n',
+		'm'
 	],
 	#classInstVars : [
 		'extracted'
@@ -17,14 +19,17 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-SPOntologyExtractor class >> constructAndSave: model ontology: aFileReference [
+SPOntologyExtractor class >> construct: modelName AndSave: model ontology: aFileReference [
 
 	| extractor |
-	extractor := SPOntologyExtractor new.
-	extractor processModel: model.
-	extractor processProperties.
-
-	(extractor constructOntology: model name) saveAs: aFileReference
+	0 to: 500 by: 50 do: [ :n | 
+		0.00 to: 0.01 by: 0.005 do: [ :m | 
+			extractor := SPOntologyExtractor n: n m: m.
+			extractor processModel: model.
+			extractor processProperties.
+			(extractor constructOntology: modelName) saveAs:
+				aFileReference
+				/ (modelName , n asString , '_' , m asString , '.ston') ] ]
 ]
 
 { #category : #'as yet unclassified' }
@@ -134,26 +139,37 @@ SPOntologyExtractor class >> loadFrom: aString [
 	aString asFileReference exists ifFalse: [ ^ self new ].
 	instance := STON fromStream: aString asFileReference readStream.
 	self assert: (instance isKindOf: self).
-
+	
 	^ instance
+]
+
+{ #category : #'as yet unclassified' }
+SPOntologyExtractor class >> n: anN m: anM [
+
+	^ self new
+		  nparameter: anN;
+		  mparameter: anM;
+		  yourself
 ]
 
 { #category : #'as yet unclassified' }
 SPOntologyExtractor class >> processModelReference: aFileReference [
 
-	| model ontofr ontolang |
+	| model ontofr ontolang modelName languageName |
+	modelName := ('.' split: aFileReference basename) third.
+	languageName := ('.' split: aFileReference basename) first.
 	model := MOModel loadFrom: aFileReference.
-	ontofr := '/Users/sbragagn/git-repositories/ontologies/'
-		          asFileReference
-	          /
-	          (aFileReference basename
-		           copyReplaceAll: 'moxing'
-		           with: 'ontology').
+
+	('/Users/sbragagn/git-repositories/ontologies/' asFileReference
+	 / languageName) ensureCreateDirectory.
+	ontofr := ('/Users/sbragagn/git-repositories/ontologies/'
+		           asFileReference / languageName / modelName)
+		          ensureCreateDirectory.
+
 	ontolang := ('/Users/sbragagn/git-repositories/ontologies/'
-	             , (('.' split: aFileReference basename) first , '.ston'))
-		            asFileReference.
-	self constructAndSave: model ontology: ontofr.
-	self contribute: model toLanguageOntology: ontolang
+	             , (languageName , '.ston')) asFileReference.
+	self construct: modelName AndSave: model ontology: ontofr.
+"	self contribute: model toLanguageOntology: ontolang"
 ]
 
 { #category : #public }
@@ -195,11 +211,11 @@ SPOntologyExtractor >> classes [
 { #category : #'as yet unclassified' }
 SPOntologyExtractor >> constructOntology: name [
 
-
 	^ SPOntology new
 		  classes: classes;
 		  relations: relations;
 		  name: name;
+		  n: n m: m;
 		  yourself
 ]
 
@@ -222,6 +238,18 @@ SPOntologyExtractor >> model [
 	^ classes values detect: [ :a | a name = #MOModel ]
 ]
 
+{ #category : #accessing }
+SPOntologyExtractor >> mparameter [
+
+	^ m
+]
+
+{ #category : #accessing }
+SPOntologyExtractor >> mparameter: aValue [ 
+
+	 m := aValue.
+]
+
 { #category : #'instance creation' }
 SPOntologyExtractor >> newIncomingRelationOfKind: aString [
 
@@ -242,6 +270,18 @@ SPOntologyExtractor >> newOutgoingRelationOfKind: aString [
 		       yourself.
 	relations add: rel.
 	^ rel
+]
+
+{ #category : #accessing }
+SPOntologyExtractor >> nparameter [
+
+	^ n
+]
+
+{ #category : #accessing }
+SPOntologyExtractor >> nparameter: aValue [ 
+
+	 n := aValue.
 ]
 
 { #category : #visiting }
@@ -392,27 +432,41 @@ SPOntologyExtractor >> relationKind: aString [
 SPOntologyExtractor >> resolvePropertyFrom: aFrom to: aSPClass sampled: aCollection relationNamed: aRelationName [
 
 	| packageName class |
-	class := self class environment at: aSPClass name.
+	" We treat no literals. "
 	aFrom supertype name = #MOLiteral ifTrue: [ ^ { aSPClass } ].
-
-
-	packageName := class package name.
+	class := self class environment at: aSPClass name.
+	
+	" We treat no values related with booleans. "
 	({ 
 		 Boolean.
 		 True.
 		 False } includes: class) ifTrue: [ ^ { aSPClass } ].
+		
+	packageName := class package name.
+	
+	
+	" We treat no entities from the model"
 	(packageName beginsWith: #Moxing) ifTrue: [ ^ { aSPClass } ].
-	aCollection size < 100 ifTrue: [ ^ { aSPClass } ].
-	(aCollection asSet size / aCollection size) asFloat < 0.02 ifFalse: [ 
+	
+	
+	" If the size of the collection of possible values is less than N we do nothing "
+	aCollection size < self nparameter ifTrue: [ ^ { aSPClass } ].
+	
+	" If the size of the ratio of variaty of possible different values is less than M we do nothing "
+	(aCollection asSet size / aCollection size) asFloat < self mparameter ifFalse: [ 
 		^ { aSPClass } ].
-	"self halt: aCollection asSet asString."
-
-
+	
+	" Create or get all the possible values classes "
 	^ aCollection asSet collect: [ :a | 
 		  self
 			  subclassOf: aSPClass
 			  named: a asString capitalized
-			  relationNamed: aRelationName ]
+			  relationNamed: aRelationName ].
+		
+	
+
+
+
 ]
 
 { #category : #saving }
@@ -461,9 +515,9 @@ SPOntologyExtractor >> subclassOf: aClass named: aName relationNamed: aRelationN
 	aClass name asClass .
 	
 	class := classes at: aName , aClass name ifAbsentPut: [ 
-		         class := SPClass new name: aName capitalized.
+		         class := SPPromotedClass new name: aName capitalized.
 		         superClass := self
-			                       subclassOf: self thing
+			                       subclassOf: aClass
 			                       named: aRelationName.
 		         self
 			         relateClass: class

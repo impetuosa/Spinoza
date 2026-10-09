@@ -54,8 +54,8 @@ SPCompareLogs >> aggregationFor: model and: ontology [
 SPCompareLogs >> ensure: success and: failures [
 
 	self assert:
-		(failures basename copyReplaceAll: '.txt' with: '.relations.txt')
-		= success basename
+		(success basename , '.relations.txt')
+		=  failures basename
 ]
 
 { #category : #accessing }
@@ -67,7 +67,7 @@ SPCompareLogs >> info [
 SPCompareLogs >> initialize [
 
 	super initialize.
-	logs := ('logs' asFileReference entries collect: #asFileReference) 
+	logs := ('/Volumes/Files/Logs/' asFileReference entries collect: #asFileReference) 
 		        sort: #basename asSortFunction.
 	info := Dictionary new .
 ]
@@ -83,8 +83,16 @@ SPCompareLogs >> normname: aName [
 { #category : #initialization }
 SPCompareLogs >> process [
 
+	| current f |
+	current := 0.
+	f := (1.0 / (logs size / 2))  asFloat.
+	[ :job | 
 	logs pairsDo: [ :relations :typings | 
-		self process: relations and: typings ]
+		current := current + 1.
+		job
+			progress: f * current;
+			title: (typings basename copyReplaceAll: '.txt' with: '').
+		self process: relations and: typings ] ] asJob run
 ]
 
 { #category : #initialization }
@@ -93,7 +101,7 @@ SPCompareLogs >> process: relations and: typings [
 	| model ontology aggregation |
 	self ensure: relations and: typings.
 
-	model := '-' split: typings basenameWithoutExtension.
+	model := '.' split: (typings basename copyReplaceAll:'.txt' with:'').
 	ontology := self normname: model second.
 	model := self normname: model first.
 
@@ -128,7 +136,7 @@ SPCompareLogs >> processRelations: failures into: aggregation [
 						aggregation
 							at: #RejectedRelations
 							put: (aggregation at: #RejectedRelations) + 1 ]
-					ifFalse: [ self error: 'Cannot process this ' ] ] ].
+					ifFalse: [ ('Cannot process this ',line, ' file :', failures fullName)traceCr  ] ] ].
 	stream close
 ]
 
@@ -136,6 +144,7 @@ SPCompareLogs >> processRelations: failures into: aggregation [
 SPCompareLogs >> processTypings: failures into: aggregation [
 
 	| stream line |
+
 	stream := failures readStream.
 
 	stream upToAll: OSPlatform current lineEnding.
@@ -156,6 +165,6 @@ SPCompareLogs >> processTypings: failures into: aggregation [
 						aggregation
 							at: #RejectedEntity
 							put: (aggregation at: #RejectedEntity) + 1 ]
-					ifFalse: [ self error: 'Cannot process this ' ] ] ].
+					ifFalse: [('Cannot process this ',line, ' file :', failures fullName)traceCr  ] ] ].
 	stream close
 ]
