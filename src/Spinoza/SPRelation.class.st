@@ -19,7 +19,7 @@ SPRelation >> cardinality [
 
 { #category : #accessing }
 SPRelation >> cardinality: aString [
-	aString = nil ifTrue: [ self halt. ].
+	aString = nil ifTrue: [ self error: 'Cannot be nil' . ].
 	cardinality := aString 
 ]
 
