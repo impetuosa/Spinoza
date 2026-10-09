@@ -53,9 +53,7 @@ SPCompareDistanceLogs >> aggregationFor: model and: ontology [
 { #category : #initialization }
 SPCompareDistanceLogs >> ensure: success and: failures [
 
-	self assert:
-		(failures basename copyReplaceAll: '.txt' with: '.relations.txt')
-		= success basename
+	self assert: failures basename , '.relations.txt' = success basename
 ]
 
 { #category : #accessing }
