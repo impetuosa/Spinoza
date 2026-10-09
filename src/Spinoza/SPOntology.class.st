@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'classes',
 		'relations',
-		'name'
+		'name',
+		'nm'
 	],
 	#classInstVars : [
 		'magact'
@@ -278,8 +279,38 @@ line addInteraction: int."
 ]
 
 { #category : #accessing }
+SPOntology >> m [
+
+	^ nm second
+]
+
+{ #category : #types }
+SPOntology >> n: n m: m [
+
+	nm := { 
+		      n.
+		      m }
+]
+
+{ #category : #accessing }
+SPOntology >> name [
+	^ name
+]
+
+{ #category : #accessing }
 SPOntology >> name: aString [ 
 	name := aString
+]
+
+{ #category : #accessing }
+SPOntology >> nm [
+	^ nm
+]
+
+{ #category : #'as yet unclassified' }
+SPOntology >> promotedClasses [
+
+	^ classes values select: #isPromotedClass
 ]
 
 { #category : #'as yet unclassified' }

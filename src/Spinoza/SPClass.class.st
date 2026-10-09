@@ -44,7 +44,7 @@ SPClass >> allCommonUsefulToAs: aSPOutgoingRelation [
 			   r name = aSPOutgoingRelation name and: [ 
 				   r kind = aSPOutgoingRelation kind ] ]
 		   ifFound: [ :a | a commonUsefulTo2 ]
-		   ifNone: [ {  } ]) , (self parent
+		   ifNone: [ {  } ]) asOrderedCollection , (self parent
 		   ifNil: [ {  } ]
 		   ifNotNil: [ :p | p allCommonUsefulToAs: aSPOutgoingRelation ])
 ]
@@ -77,6 +77,15 @@ SPClass >> isOfType: aSPClass [
 	self = aSPClass ifTrue: [ ^ true ].
 	self isThing ifTrue: [ ^ false ].
 	^ self supertype isOfType: aSPClass
+]
+
+{ #category : #accessing }
+SPClass >> isPromotedClass [
+
+	^ self class environment
+		  at: name asSymbol
+		  ifPresent: [ false ]
+		  ifAbsent: [ true ]
 ]
 
 { #category : #testing }

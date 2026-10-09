@@ -11,31 +11,32 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-SPCompareExperiment class >> compare: aModelFileReference with: anOntologyFileReference logging: aFilePath [
+SPCompareExperiment class >> compare: model with: anOntologyFileReference logging: aFilePath [
+
+	aFilePath asFileReference exists ifTrue: [ ^ self ].
 
 	^ self
-		  compare: aModelFileReference
+		  compare: model
 		  with: anOntologyFileReference
 		  streamingOn: aFilePath asFileReference writeStream
 		  successOn:
-			  (aFilePath copyReplaceAll: '.txt' with: '.relations.txt')
-				  asFileReference writeStream
+		  (aFilePath , '.relations.txt') asFileReference writeStream
 ]
 
 { #category : #'as yet unclassified' }
-SPCompareExperiment class >> compare: aModelFileReference with: anOntologyFileReference streamingOn: aStream successOn: anOtherStream [
+SPCompareExperiment class >> compare: model with: anOntologyFileReference streamingOn: aStream successOn: anOtherStream [
 
 	^ self new
 		  logStream: aStream;
 		  logRelationsStream: anOtherStream;
-		  compare: aModelFileReference asFileReference
+		  compare: model
 		  with: anOntologyFileReference asFileReference
 ]
 
 { #category : #verification }
-SPCompareExperiment >> compare: aModelFileReference with: anOntologyFileReference [
+SPCompareExperiment >> compare: aModel with: anOntologyFileReference [
 	ontology := self loadOntology: anOntologyFileReference.
-	model := self loadModel: aModelFileReference.
+	model := aModel.
 	model language useOntologicalConstraintWith: ontology.
 	self processModel
 ]
